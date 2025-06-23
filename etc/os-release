@@ -1,0 +1,6 @@
+NAME="Distro_M"
+VERSION="0.0.1"
+ID=distro_m
+ID_LIKE=distro_m
+PRETTY_NAME="Distro M 0.0.1"
+VERSION_ID="0.0.1"

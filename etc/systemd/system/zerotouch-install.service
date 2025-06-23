@@ -1,0 +1,10 @@
+[Unit]
+Description=Zero-touch automated install
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/zerotouch_install.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

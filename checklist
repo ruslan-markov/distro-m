@@ -1,0 +1,42 @@
+### Секция для настройки параметров zerotouch установки ###
+### Настройка сети ###
+# auto - автоматическое получение настроек по DHCP
+# manual - ручная настройка сети
+NETWORK = manual
+# Если NETWORK=manual, укажите параметры ниже:
+IPADDR = 192.168.1.100
+NETMASK = 255.255.255.0
+GATEWAY = 192.168.1.1
+DNS1 = 8.8.8.8
+DNS2 = 8.8.4.4
+HOSTNAME = distrom
+### Ввод в домен ###
+# Если не требуется — оставить пустым
+DOMAIN = 
+# Дополнительные параметры для ввода в домен:
+# Тип домена: ad (Active Directory), samba, ldap и т.д.
+DOMAIN_TYPE = 
+# Organizational Unit (OU) — если требуется
+DOMAIN_OU = 
+# Имя пользователя с правами на ввод в домен
+DOMAIN_USER = 
+# Пароль пользователя
+DOMAIN_PASS = 
+### Создание пользователя в случае отсутствия домена ###
+USERNAME = test
+USERPASSWORD = test
+ROOTPASSWORD = root
+### Настройка локалей ###
+LOCALE = ru_RU.UTF-8
+KEYMAP = ru
+LANG = ru_RU.UTF-8
+### Настройка часового пояса ###
+TIMEZONE = Europe/Moscow
+### Настройка раскладки ###
+# Например: us,ru
+LAYOUT = us,ru
+# Основная раскладка
+MAIN_LAYOUT = ru
+### Список пакетов, необходимых для установки ###
+# Перечислите дополнительные пакеты через пробел или запятую
+PACKAGES = 
