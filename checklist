@@ -2,14 +2,14 @@
 ### Настройка сети ###
 # auto - автоматическое получение настроек по DHCP
 # manual - ручная настройка сети
-NETWORK = manual
+NETWORK = auto
 # Если NETWORK=manual, укажите параметры ниже:
-IPADDR = 192.168.1.100
-NETMASK = 255.255.255.0
-GATEWAY = 192.168.1.1
-DNS1 = 8.8.8.8
-DNS2 = 8.8.4.4
-HOSTNAME = distrom
+IPADDR = 
+NETMASK = 
+GATEWAY = 
+DNS1 = 
+DNS2 = 
+HOSTNAME = 
 ### Ввод в домен ###
 # Если не требуется — оставить пустым
 DOMAIN = 
@@ -34,7 +34,7 @@ LANG = ru_RU.UTF-8
 TIMEZONE = Europe/Moscow
 ### Настройка раскладки ###
 # Например: us,ru
-LAYOUT = us,ru
+LAYOUT = us, ru
 # Основная раскладка
 MAIN_LAYOUT = ru
 ### Список пакетов, необходимых для установки ###

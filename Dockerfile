@@ -7,13 +7,10 @@ RUN pacman -Syu --noconfirm && \
 
 WORKDIR /workspace
 
-# Копируем все файлы проекта
 COPY . /workspace
 
-# Делаем steps.sh исполняемым
 RUN chmod +x steps.sh
 
 USER root
 
-# Запускаем сборку от root
 CMD ["/workspace/steps.sh"]

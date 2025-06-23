@@ -25,11 +25,13 @@ find_checklist() {
 }
 
 CHECKLIST=$(find_checklist)
-DISK="/dev/vda" # <--- Обязательно укажите необходимый диск для установки, например, /dev/sda или /dev/nvme0n1   
+DISK="/dev/sda" # <--- Обязательно укажите необходимый диск для установки, например, /dev/sda или /dev/nvme0n1   
 
 get_value() {
     local key="$1"
-    grep -E "^$key[[:space:]]*=" "$CHECKLIST" | head -n1 | cut -d= -f2- | xargs
+    local value
+    value=$(grep -E "^$key[[:space:]]*=" "$CHECKLIST" | head -n1 | cut -d= -f2- | xargs || true)
+    echo "$value"
 }
 
 log() {
@@ -37,9 +39,24 @@ log() {
 }
 
 MYUSERNM=$(get_value "USERNAME")
+if [[ -z "$MYUSERNM" ]]; then
+    MYUSERNM="user"
+fi
+
 MYUSRPASSWD=$(get_value "USERPASSWORD")
+if [[ -z "$MYUSRPASSWD" ]]; then
+    MYUSRPASSWD="password"
+fi
+
 RTPASSWD=$(get_value "ROOTPASSWORD")
+if [[ -z "$RTPASSWD" ]]; then
+    RTPASSWD="root"
+fi
+
 MYHOSTNM=$(get_value "HOSTNAME")
+if [[ -z "$MYHOSTNM" ]]; then
+    MYHOSTNM="archlinux"
+fi
 
 detect_and_set_de() {
     log "Evaluating computer performance..."
@@ -68,8 +85,8 @@ partition_disk() {
 mount_partitions() {
     log "Mounting partitions"
     mount "${DISK}2" /mnt
-    mkdir -p /mnt/boot/efi
-    mount "${DISK}1" /mnt/boot/efi
+    mkdir -p /mnt/boot
+    mount "${DISK}1" /mnt/boot
     mkdir -p /mnt/etc
     cp /etc/pacman.conf /mnt/etc/pacman.conf
 }
@@ -105,39 +122,71 @@ MYUSRPASSWD=$(cat /root/zerotouch_userpass)
 RTPASSWD=$(cat /root/zerotouch_rootpass)
 MYHOSTNM=$(cat /root/zerotouch_hostname)
 
-get_value() {
+function get_value {
     local key="$1"
-    grep -E "^$key[[:space:]]*=" "$CHECKLIST" | head -n1 | cut -d= -f2- | xargs
+    local value
+    value=$(grep -E "^$key[[:space:]]*=" "$CHECKLIST" | head -n1 | cut -d= -f2- | xargs || true)
+    echo "$value"
 }
 
+
 locale=$(get_value "LOCALE")
+if [[ -z "$locale" ]]; then
+    locale="en_US.UTF-8"
+fi
+
 lang=$(get_value "LANG")
+if [[ -z "$lang" ]]; then
+    lang="en_US.UTF-8"
+fi
+
 keymap=$(get_value "KEYMAP")
+if [[ -z "$keymap" ]]; then
+    keymap="us"
+fi
+
 echo "$locale UTF-8" > /etc/locale.gen
 locale-gen
 echo "LANG=$lang" > /etc/locale.conf
 echo "KEYMAP=$keymap" > /etc/vconsole.conf
 
 timezone=$(get_value "TIMEZONE")
+if [[ -z "$timezone" ]]; then
+    timezone="UTC"
+fi
 ln -sf "/usr/share/zoneinfo/$timezone" /etc/localtime
 hwclock --systohc
 
-echo "$MYHOSTNM" > /etc/hostname
+if [[ -n "$MYHOSTNM" ]]; then
+    echo "$MYHOSTNM" > /etc/hostname
+fi
 
-echo "root:$RTPASSWD" | chpasswd
+if [[ -n "$RTPASSWD" ]]; then
+    echo "root:$RTPASSWD" | chpasswd
+fi
 
 systemctl enable NetworkManager
 
-if ! id "$MYUSERNM" &>/dev/null; then
-    useradd -m -G wheel "$MYUSERNM"
-    echo "$MYUSERNM:$MYUSRPASSWD" | chpasswd
-    echo "%wheel ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/zerotouch
+if [[ -n "$MYUSERNM" && -n "$MYUSRPASSWD" ]]; then
+    if ! id "$MYUSERNM" &>/dev/null; then
+        useradd -m -G wheel "$MYUSERNM"
+        echo "$MYUSERNM:$MYUSRPASSWD" | chpasswd
+        echo "%wheel ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/zerotouch
+    fi
 fi
 
 layout=$(get_value "LAYOUT")
+if [[ -z "$layout" ]]; then
+    layout="us"
+fi
+
 main_layout=$(get_value "MAIN_LAYOUT")
+if [[ -z "$main_layout" ]]; then
+    main_layout="us"
+fi
+
 mkdir -p /etc/X11/xorg.conf.d
-cat > /etc/X11/xorg.conf.d/00-keyboard.conf <<EOK
+cat > /etc/X11/xorg.conf.d/00-keyboard.conf <<EOF
 Section "InputClass"
     Identifier "system-keyboard"
     MatchIsKeyboard "on"
@@ -145,33 +194,48 @@ Section "InputClass"
     Option "XkbOptions" "grp:alt_shift_toggle"
     Option "XkbModel" "pc105"
 EndSection
-EOK
+EOF
 
 pkgs=$(get_value "PACKAGES")
+if [[ -z "$pkgs" ]]; then
+    pkgs=""
+fi
 
 if [[ "$DE" == "kde" ]]; then
     de_pkgs="plasma kde-applications sddm xorg-server xorg-xinit konsole dolphin firefox"
-    systemctl enable sddm
 elif [[ "$DE" == "xfce" ]]; then
     de_pkgs="xfce4 xfce4-goodies lightdm lightdm-gtk-greeter xorg-server xorg-xinit mousepad thunar firefox"
+else
+    de_pkgs=""
+fi
+
+if [[ -n "$de_pkgs" || -n "$pkgs" ]]; then
+    pacman -Sy --noconfirm $de_pkgs $pkgs
+fi
+
+if [[ "$DE" == "kde" ]]; then
+    systemctl enable sddm
+elif [[ "$DE" == "xfce" ]]; then
     systemctl enable lightdm
 fi
 
-pacman -Sy --noconfirm $de_pkgs $pkgs
-
 bootctl --path=/boot install
-cat > /boot/loader/loader.conf <<EOL
+cat > /boot/loader/loader.conf <<EOF
 default arch
 timeout 3
-EOL
-cat > /boot/loader/entries/arch.conf <<EOL
-title   Arch Linux
+EOF
+cat > /boot/loader/entries/arch.conf <<EOF
+title   Distro M
 linux   /vmlinuz-linux-lts
 initrd  /initramfs-linux-lts.img
 options root=PARTUUID=$(blkid -s PARTUUID -o value ${DISK}2) rw
-EOL
+EOF
 
 network=$(get_value "NETWORK")
+if [[ -z "$network" ]]; then
+    network="auto"
+fi
+
 if [[ "$network" == "manual" ]]; then
     ipaddr=$(get_value "IPADDR")
     netmask=$(get_value "NETMASK")
@@ -179,9 +243,10 @@ if [[ "$network" == "manual" ]]; then
     dns1=$(get_value "DNS1")
     dns2=$(get_value "DNS2")
 
-    prefix=$(ipcalc -p "$ipaddr" "$netmask" | awk -F= '{print $2}')
+    if [[ -n "$ipaddr" && -n "$netmask" && -n "$gateway" && -n "$dns1" ]]; then
+        prefix=$(ipcalc -p "$ipaddr" "$netmask" | awk -F= '{print $2}')
 
-    cat > /etc/NetworkManager/system-connections/wired.nmconnection <<ENM
+        cat > /etc/NetworkManager/system-connections/wired.nmconnection <<ENM
 [connection]
 id=Manual Wired
 type=ethernet
@@ -198,18 +263,18 @@ never-default=false
 method=ignore
 ENM
 
-    chmod 600 /etc/NetworkManager/system-connections/wired.nmconnection
-    systemctl enable NetworkManager
-    nmcli connection reload
+        chmod 600 /etc/NetworkManager/system-connections/wired.nmconnection
+        systemctl enable NetworkManager
+        nmcli connection reload
+    fi
 fi
-
 
 domain=$(get_value "DOMAIN")
 domain_type=$(get_value "DOMAIN_TYPE")
 domain_user=$(get_value "DOMAIN_USER")
 domain_pass=$(get_value "DOMAIN_PASS")
 domain_ou=$(get_value "DOMAIN_OU")
-if [[ -n "$domain" && "$domain_type" == "ad" ]]; then
+if [[ -n "$domain" && "$domain_type" == "ad" && -n "$domain_user" && -n "$domain_pass" ]]; then
     pacman -Sy --noconfirm realmd adcli sssd
     echo "$domain_pass" | realm join --user="$domain_user" "$domain" ${domain_ou:+--computer-ou="$domain_ou"}
 fi
